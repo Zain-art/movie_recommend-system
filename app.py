@@ -1,72 +1,108 @@
+# # from flask import Flask,request,render_template
+# # import pandas as pd 
+# # import pickle
+# # import numpy as np 
+
+# # model=pickle.load(open('breast_model.pkl','rb'))
+
+# # ## flask app
+# # app=Flask(__name__)
+
+# # @app.route('/')
+# # def index():
+# #     return render_template('index.html')
+
+# # @app.route('/predict',methods=['POST'])
+# # def predict():
+# #     breast = request.form.get('breast')
+# #     breast_lst=breast.split(',')
+# #     np_breast=np.asarray(breast_lst,dtype=np.float32)
+# #     pred=model.predict(np_breast.reshape(1,-1))
+# #     output=['cancrous' if pred[0] == 1 else 'not cancrous']
+
+# #     return render_template('index.html',message=output)
+
+
+
+
+
+
+
+
+
+
+# # ## python main
+
+# # if __name__== '__main__':
+# #     app.run(debug=True)
+
+
+# from flask import Flask, render_template, request
+# import numpy as np
+# import pandas as pd
+# import pickle
+
+# # loading model
+# model = pickle.load(open('breast_model.pkl', 'rb'))
+
+# # flask app
+# app = Flask(__name__)
+
+
+# @app.route('/')
+# def home():
+#     return render_template('index.html')
+
+
+# @app.route('/predict', methods=['POST'])
+# def predict():
+#     features = request.form.get('feature')
+#     print('form get data',request.form)
+#     features = features.split(',')
+#     np_features = np.asarray(features, dtype=np.float32)
+
+#     # prediction
+#     pred = model.predict(np_features.reshape(1, -1))
+#     message = ['Cancrouse' if pred[0] == 1 else 'Not Cancrouse']
+#     # print(message[0])
+#     return render_template('index.html', message=message)
+
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+
 import streamlit as st
-import pickle
-import gzip
-import requests
-import pandas as pd
-import streamlit as st
-# print('stream version yeh ha',st.__version__)
-def fetch_poster(movie_id):
-    url = "https://api.themoviedb.org/3/movie/{}?api_key=8265bd1679663a7ea12ac168da84d2e8&language=en-US".format(movie_id)
-    data = requests.get(url)
-    data = data.json()
-    
-    poster_path = data['poster_path']
-    full_path = "https://image.tmdb.org/t/p/w500/" + poster_path
-    return full_path
+import numpy as np
+import joblib  # or any other method to load your model
 
+# Load your model
+model = joblib.load('breast_model.pkl')  # Update with your model file path
 
-# moive_dict=pickle.load(open('movie_dict.pkl','rb'))
-# similarity=pickle.load(open('similarity.pkl','rb'))
-with gzip.open('movie_dict.pkl.gz', 'rb') as f:
-    model_dict = pickle.load(f)
-with gzip.open('similarity.pkl.gz', 'rb') as f:
-    similarity = pickle.load(f)
-# moive_list=moive_list['title'].values
-movies=pd.DataFrame(model_dict)
+# Streamlit App
+def main():
+    st.title('Machine Learning Model Prediction')
 
-def recommend(movie):
-    index = movies[movies['title'] == movie].index[0]
-    distances=similarity[index]
-    movie_list = sorted(list(enumerate(distances)),reverse=True,key = lambda x: x[1])[1:6]
-    recommend_list=[]
-    recommend_movie_posters=[]
-    for i in movie_list:
-        movie_id=movies.iloc[i[0]].movie_id
-        # 743b17fad153bacac9c734595edb8093 API KEY
-        # fetch movie poster
-    #     curl --request GET \
-    #  --url 'https://api.themoviedb.org/3/genre/movie/list?language=en' \
-    #  --write 'accept: application/json'
-        recommend_list.append(movies.iloc[i[0]].title)
-        recommend_movie_posters.append(fetch_poster(movie_id))
-    return recommend_list , recommend_movie_posters
+    # Input from user
+    features_input = st.text_input('Enter features separated by commas')
 
-st.title('Movie Recommender System')
+    if st.button('Predict'):
+        if features_input:
+            try:
+                # Convert input string to list of floats
+                features = [float(x) for x in features_input.split(',')]
+                np_features = np.asarray(features, dtype=np.float32)
+                
+                # Prediction
+                pred = model.predict(np_features.reshape(1, -1))
+                
+                # Display the result
+                result = 'Cancrouse' if pred[0] == 1 else 'Not Cancrouse'
+                st.write(f'Prediction: {result}')
+            except Exception as e:
+                st.error(f'Error processing input: {str(e)}')
+        else:
+            st.error('Please enter the features')
 
-selected_movie_name=st.selectbox(
-    'How would you like to be search movie on recommended base system?',
-    movies['title'].values
-) 
-
-if st.button('Recommend'):
-    name,posters=recommend(selected_movie_name)
-    
-    col1,col2,col3,col4,col5 =  st.columns(5)
-    with col1:
-         st.write(name[0])
-         st.image(posters[0])
-    with col2:
-         st.write(name[1])
-         st.image(posters[1])
-    with col3:
-         st.write(name[2])
-         st.image(posters[2])
-    with col4:
-         st.write(name[3])
-         st.image(posters[3])
-    with col5:
-         st.write(name[4])
-         st.image(posters[4])
-
-
-        
+if __name__ == "__main__":
+    main()
